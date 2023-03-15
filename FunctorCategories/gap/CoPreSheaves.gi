@@ -445,11 +445,22 @@ InstallMethodWithCache( CoPreSheaves,
     
     O := Opposite( Hom : FinalizeCategory := false, only_primitive_operations := true );
     
-    if not HasRangeCategoryOfHomomorphismStructure( O ) and
-       (HasIsInitialCategory and IsInitialCategory)( B ) then
+    if not HasRangeCategoryOfHomomorphismStructure( O ) then
         
-        SetRangeCategoryOfHomomorphismStructure( O, O );
-        SetIsEquippedWithHomomorphismStructure( O, true );
+        if (HasIsInitialCategory and IsInitialCategory)( B ) then
+            
+            SetRangeCategoryOfHomomorphismStructure( O, O );
+            SetIsEquippedWithHomomorphismStructure( O, true );
+            
+        elif HasRangeCategoryOfHomomorphismStructure( B ) and
+          IsIdenticalObj( RangeCategoryOfHomomorphismStructure( B ), C ) and
+          IsBoundGlobal( "IsIntervalCategory" ) and
+          ValueGlobal( "IsIntervalCategory" )( C ) then
+            
+            SetRangeCategoryOfHomomorphismStructure( O, C );
+            SetIsEquippedWithHomomorphismStructure( C, true );
+            
+        fi;
         
     fi;
     
