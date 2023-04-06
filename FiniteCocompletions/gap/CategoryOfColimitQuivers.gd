@@ -89,6 +89,22 @@ CapJitAddTypeSignature( "DefiningPairOfColimitQuiverMorphism", [ IsMorphismInCat
     
 end );
 
+#! @Arguments G
+DeclareAttribute( "ExtendFunctorToFiniteColimitCocompletionWithStrictCoproducts",
+        IsCapFunctor );
+
+#! @Arguments G
+DeclareAttribute( "ExtendYonedaEmbeddingToFiniteColimitCocompletionWithStrictCoproducts",
+        IsCapCategory );
+
+#! @Arguments G
+DeclareAttribute( "CoYonedaLemmaEquivalence",
+        IsCapCategory );
+
+#! @Arguments G
+DeclareAttribute( "ExtendFunctorToCategoryOfPreSheaves",
+        IsCapFunctor );
+
 ####################################
 #
 #! @Section Constructors
