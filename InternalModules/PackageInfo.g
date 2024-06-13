@@ -89,6 +89,7 @@ Dependencies := rec(
                            [ "MonoidalCategories", ">= 2024.06-02" ],
                            [ "CartesianCategories", ">= 2024.06-03" ],
                            [ "LinearAlgebraForCAP", ">= 2024.08-03" ],
+                           [ "FreydCategoriesForCAP", ">= 2024.08-01" ],
                            [ "ToolsForCategoricalTowers", ">= 2023.11-03" ],
                            [ "GradedCategories", ">= 2023.08-02" ],
                            [ "AttributeCategoryForCAP", ">= 2023.02-03" ],
