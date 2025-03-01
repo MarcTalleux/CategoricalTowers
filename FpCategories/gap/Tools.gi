@@ -4,7 +4,6 @@
 # Implementations
 #
 
-
 ##
 InstallTrueMethod( IsObjectFiniteCategory, IsFinitelyPresentedCategory );
 InstallTrueMethod( IsFinitelyPresentedCategory, IsFiniteCategory );
@@ -1095,57 +1094,143 @@ InstallMethod( NaturalTransformation,
     
 end );
 
-if IsPackageMarkedForLoading( "Digraphs", ">= 1.3.1" ) then
-
 ##
-InstallMethod( QuiverStringOfDigraph,
-               [ IsDigraph, IsString, IsString ],
-               
-  function( digraph, name, mor )
-    local string, vertices, label, labels, mors;
-    
-    string := [ name, "(" ];
-    
-    vertices := DigraphVertices( digraph );
-    
-    label :=
-      function( vertex )
-        local str;
+InstallMethod( EmbeddingOfUnderlyingQuiverData,
+        "for a syntactic category",
+        [ IsSyntacticCategory ],
         
-        str := String( DigraphVertexLabel( digraph, vertex ) );
+  function( syntactic_cat )
+    local embedding_on_objects, embedding_on_morphisms;
+    
+    Assert( 0, HasUnderlyingQuiver( syntactic_cat ) );
+    
+    embedding_on_objects :=
+      function( o )
         
-        if First( str ) = '(' and Last( str ) = ')' then
-            str := str{[ 2 .. Length( str ) - 1 ]};
-        fi;
-        
-        return str;
+        return ObjectConstructor( syntactic_cat,
+                       Pair( "ObjectConstructor", [ ObjectLabel( o ) ] ) );
         
     end;
     
-    labels := List( vertices, label );
-    
-    Append( string, [ JoinStringsWithSeparator( labels, "," ), ")[" ] );
-    
-    mors :=
-      function( s )
-        local targets;
+    embedding_on_morphisms :=
+      function( source, m, target )
         
-        targets := OutNeighborsOfVertex( digraph, s );
-        
-        if DuplicateFreeList( targets ) = targets then
-            return List( targets, t ->
-                         Concatenation( mor, "_", String( s ), "_", String( t ), ":", labels[s], "->", labels[t] ) );
-        else
-            return List( [ 1 .. Length( targets ) ], i ->
-                         Concatenation( mor, "_", String( s ), "_", String( targets[i] ), "_", String( i ), ":", labels[s], "->", labels[targets[i]] ) );
-        fi;
+        return MorphismConstructor( syntactic_cat,
+                       source,
+                       Pair( "MorphismConstructor", [ MorphismLabel( m ) ] ),
+                       target );
         
     end;
     
-    Append( string, [ JoinStringsWithSeparator( Concatenation( List( [ 1 .. Length( vertices ) ], mors ) ), "," ), "]" ] );
-    
-    return Concatenation( string );
+    return Triple( UnderlyingQuiver( syntactic_cat ),
+                   Pair( embedding_on_objects, embedding_on_morphisms ),
+                   syntactic_cat );
     
 end );
 
-fi;
+##
+InstallMethod( EmbeddingOfUnderlyingQuiver,
+        "for a syntactic category",
+        [ IsSyntacticCategory ],
+        
+  function( syntactic_cat )
+    local data, Y;
+    
+    data := EmbeddingOfUnderlyingQuiverData( syntactic_cat );
+    
+    Y := CapFunctor( "Embedding functor into a syntactic category", data[1], syntactic_cat );
+    
+    AddObjectFunction( Y, data[2][1] );
+    
+    AddMorphismFunction( Y, data[2][2] );
+    
+    return Y;
+    
+end );
+
+##
+InstallMethod( \.,
+        "for a syntactic category and a positive integer",
+        [ IsSyntacticCategory, IsPosInt ],
+        
+  function( syntactic_cat, string_as_int )
+    local name, q, cell, Y, Yc;
+    
+    name := NameRNam( string_as_int );
+    
+    q := UnderlyingQuiver( syntactic_cat );
+    
+    cell := q.(name);
+    
+    Y := EmbeddingOfUnderlyingQuiver( syntactic_cat );
+    
+    Yc := Y( cell );
+    
+    return Yc;
+    
+end );
+
+##
+InstallMethod( EmbeddingOfUnderlyingCategoryData,
+        "for a syntactic category",
+        [ IsSyntacticCategory ],
+        
+  function( syntactic_cat )
+    local P, Y, mors, embedding_on_objects, embedding_on_morphisms;
+    
+    Assert( 0, HasUnderlyingCategory( syntactic_cat ) );
+    
+    P := UnderlyingCategory( syntactic_cat );
+    
+    Assert( 0, IsPathCategory( P ) );
+    
+    SetUnderlyingQuiver( syntactic_cat, UnderlyingQuiver( P ) );
+    
+    Assert( 0, IsIdenticalObj( UnderlyingQuiver( syntactic_cat ), UnderlyingQuiver( P ) ) );
+    
+    Y := EmbeddingOfUnderlyingQuiver( syntactic_cat );
+    
+    mors := List( SetOfMorphisms( UnderlyingQuiver( P ) ), Y );
+    
+    embedding_on_objects :=
+      function( o )
+        
+        return Y( UnderlyingQuiverObject( o ) );
+        
+    end;
+    
+    embedding_on_morphisms :=
+      function( source, m, target )
+        
+        return PreComposeList( syntactic_cat,
+                       source,
+                       List( MorphismIndices( m ), a -> mors[a] ),
+                       target );
+        
+    end;
+    
+    return Triple( UnderlyingCategory( syntactic_cat ),
+                   Pair( embedding_on_objects, embedding_on_morphisms ),
+                   syntactic_cat );
+    
+end );
+
+##
+InstallMethod( EmbeddingOfUnderlyingCategory,
+        "for a syntactic category",
+        [ IsSyntacticCategory ],
+        
+  function( syntactic_cat )
+    local data, Y;
+    
+    data := EmbeddingOfUnderlyingCategoryData( syntactic_cat );
+    
+    Y := CapFunctor( "Embedding functor into a syntactic category", data[1], syntactic_cat );
+    
+    AddObjectFunction( Y, data[2][1] );
+    
+    AddMorphismFunction( Y, data[2][2] );
+    
+    return Y;
+    
+end );
