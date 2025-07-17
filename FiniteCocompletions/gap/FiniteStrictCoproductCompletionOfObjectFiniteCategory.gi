@@ -339,7 +339,7 @@ InstallMethod( FiniteStrictCoproductCompletionOfObjectFiniteCategory,
         l := NumberOfObjectsOfUnderlyingCategory( UCm );
         
         maps_cmp := List( [ 1 .. l ], o ->
-                          Pair( List( [ 1 .. s[o] ], i -> maps_post[1 + maps_pre[o][1][i]][1][i] ),
+                          Pair( List( [ 1 .. s[o] ], i -> maps_post[1 + maps_pre[o][1][i]][1][1 + maps_pre[o][2][i]] ),
                                 List( [ 1 .. s[o] ], i -> maps_post[1 + maps_pre[o][1][i]][2][1 + maps_pre[o][2][i]] ) ) );
         
         mors_pre := pair_of_lists_pre[2];
@@ -450,7 +450,7 @@ InstallMethod( FiniteStrictCoproductCompletionOfObjectFiniteCategory,
 
             s := PairOfIntAndList(common_source)[2];
 
-            data := List( list_of_parallel_morphisms, mor -> PairOfLists( UCm, mor ) );
+            data := List( list_of_parallel_morphisms, mor -> PairOfLists( mor ) );
             
             maps := List( data, datum -> datum[1] );
 
@@ -493,15 +493,16 @@ InstallMethod( FiniteStrictCoproductCompletionOfObjectFiniteCategory,
         
         AddEmbeddingOfEqualizer( UCm,
           function( UCm, common_source, list_of_parallel_morphisms )
-            local l, n, s, data, maps, mors, pos_eq, flat_pos_eq, lists_of_parallel_morphisms_in_C,
-                  C, objectsC, eq, eq_index_in_C, sort_index_eq, Eq, equalizer, emb_maps, emb_mors;
+            local l, n, s, data, maps, mors, pos_eq, flat_pos_eq_block, flat_pos_eq_i, eq,
+                  lists_of_parallel_morphisms_in_C, C, objectsC, eq_index_in_C, sort_index_eq,
+                  Eq, equalizer, emb_maps, emb_mors;
 
             l := NumberOfObjectsOfUnderlyingCategory( UCm );
             n := Length( list_of_parallel_morphisms );
 
             s := PairOfIntAndList(common_source)[2];
 
-            data := List( list_of_parallel_morphisms, mor -> PairOfLists( UCm, mor ) );
+            data := List( list_of_parallel_morphisms, mor -> PairOfLists( mor ) );
             
             maps := List( data, datum -> datum[1] );
 
@@ -513,23 +514,24 @@ InstallMethod( FiniteStrictCoproductCompletionOfObjectFiniteCategory,
                                               maps[j][o][1][ x + 1 ] = maps[j + 1][o][1][ x + 1 ]
                                               and maps[j][o][2][ x + 1 ] = maps[j + 1][o][2][ x + 1 ] ) ) );
             
-            flat_pos_eq := Concatenation( List( [ 1 .. l ], o -> List( pos_eq[o], i -> [ -1 + o , i ] ) ) );
+            flat_pos_eq_block := Concatenation( List( [ 1 .. l ], o ->
+                                                      ListWithIdenticalEntries( Length( pos_eq[o] ), -1 + o ) ) );
             
-            #flat_pos_eq_block := List( [ 1 .. l ], o -> ListWithIdenticalEntries( Length( pos_eq[o] ), -1 + o ) );
-            #flat_pos_eq_i := Concatenation( pos_eq );
+            flat_pos_eq_i := Concatenation( pos_eq );
 
-            lists_of_parallel_morphisms_in_C := List( flat_pos_eq , x ->
-                                                      List( [ 1 .. n ], j -> mors[j][ 1 + x[1] ][ 1 + x[2] ] ) );
+            eq := Length( flat_pos_eq_block );
+
+            lists_of_parallel_morphisms_in_C := List( [ 1 .. eq ] , i ->
+                                                      List( [ 1 .. n ], j ->
+                                                            mors[j][ 1 + flat_pos_eq_block[i] ][ 1 + flat_pos_eq_i[i] ] ) );
             C := UnderlyingCategory( UCm );
 
             objectsC := SetOfObjects( C );
 
-            eq := Length( flat_pos_eq );
-
             eq_index_in_C := List( [ 1 .. eq ], i ->
                                         Position( objectsC,
                                                   Equalizer( C,
-                                                        objectsC[ 1 + flat_pos_eq[i][1] ],
+                                                        objectsC[ 1 + flat_pos_eq_block[i] ],
                                                         lists_of_parallel_morphisms_in_C[i] ) ) );
 
             sort_index_eq := List( [ 1 .. l ], o -> Positions( eq_index_in_C, o ) );
@@ -538,13 +540,12 @@ InstallMethod( FiniteStrictCoproductCompletionOfObjectFiniteCategory,
 
             equalizer := ObjectConstructor( UCm, Pair( eq, Eq ) );
 
-            emb_maps := List( [ 1 .. l ], o -> Pair( List( [ 1 .. Eq[o] ], i -> flat_pos_eq[ sort_index_eq[o][i] ][ 1 ] ),
-                                                     List( [ 1 .. Eq[o] ], i -> flat_pos_eq[ sort_index_eq[o][i] ][ 2 ] ) ) );
+            emb_maps := List( [ 1 .. l ], o -> Pair( flat_pos_eq_block{sort_index_eq[o]}, flat_pos_eq_i{sort_index_eq[o]} ) );
 
             emb_mors := List( [ 1 .. l ], o ->
                               List( [ 1 .. Eq[o] ], i ->
                                     EmbeddingOfEqualizerWithGivenEqualizer( C,
-                                            objectsC[ 1 + flat_pos_eq[ sort_index_eq[o][i] ][1] ],
+                                            objectsC[ 1 + flat_pos_eq_block[ sort_index_eq[o][i] ] ],
                                             lists_of_parallel_morphisms_in_C[ sort_index_eq[o][i] ],        
                                             objectsC[o] ) ) );
             
@@ -567,7 +568,7 @@ InstallMethod( FiniteStrictCoproductCompletionOfObjectFiniteCategory,
 
             s := PairOfIntAndList(common_source)[2];
 
-            data := List( list_of_parallel_morphisms, mor -> PairOfLists( UCm, mor ) );
+            data := List( list_of_parallel_morphisms, mor -> PairOfLists( mor ) );
             
             maps := List( data, datum -> datum[1] );
 
@@ -616,7 +617,7 @@ InstallMethod( FiniteStrictCoproductCompletionOfObjectFiniteCategory,
                                    List( [ 1 .. t[o] ], i ->
                                          Position( flat_pos_eq, [ test_maps[o][1][i], test_maps[o][2][i] ] ) ) );
             
-            univ_maps := List( [ 1 .. l ], o -> Pair( -1 + eq_index_in_C{[ pos_test_maps[o] ]} , -1 + offset{[ pos_test_maps[o] ]} ) );
+            univ_maps := List( [ 1 .. l ], o -> Pair( -1 + eq_index_in_C{pos_test_maps[o]} , -1 + offset{pos_test_maps[o]} ) );
 
             univ_mors := List( [ 1 .. l ], o ->
                                List( [ 1 .. t[o] ], i -> 
