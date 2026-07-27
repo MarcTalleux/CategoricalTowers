@@ -688,9 +688,9 @@ InstallMethod( FiniteStrictCoproductCompletionOfObjectFiniteCategory,
         
         AddEqualizer( UCm,
           function( UCm, common_source, list_of_parallel_morphisms )
-            local C, objectsC, l, n, s, data, coarse_maps, fine_maps, mors, pos_eq, flat_pos_eq,
-                  lists_of_parallel_morphisms_in_C, eq, eq_index_in_C, sort_index_eq;
-            
+            local C, objectsC, l, n, s, data, coarse_maps, fine_maps, mors, focus,
+                  focus_length, equalizers_C, flat_equalizer_C;
+
             C := UnderlyingCategory( UCm );
             
             objectsC := SetOfObjectsOfCategory( C );
@@ -701,37 +701,30 @@ InstallMethod( FiniteStrictCoproductCompletionOfObjectFiniteCategory,
             
             s := PairOfIntAndList(common_source)[2];
             
-            data := List( list_of_parallel_morphisms, TripleOfLists );
-
-            coarse_maps := List( data, datum -> datum[1] );
-
-            fine_maps := List( data, datum -> datum[2] );
+            data := List( list_of_parallel_morphisms, mor -> TripleOfLists( mor ) );
             
+            coarse_maps := List( data, datum -> datum[1] );
+            fine_maps := List( data, datum -> datum[2] );
             mors := List( data, datum -> datum[3] );
             
-            pos_eq := List( [ 1 .. l ], c ->
-                            Filtered( [ 0 .. s[c] - 1 ], i ->
-                                    ForAll( [ 1 .. n - 1 ], j ->
-                                            coarse_maps[j][c][ i + 1 ] = coarse_maps[j + 1][c][ i + 1 ] and
-                                            fine_maps[j][c][ i + 1 ] = fine_maps[j + 1][c][ i + 1 ] ) ) );
-            
-            flat_pos_eq := Concatenation( List( [ 1 .. l ], c -> List( pos_eq[c], i -> [ -1 + c , i ] ) ) );
-            
-            lists_of_parallel_morphisms_in_C := List( flat_pos_eq , x ->
-                                                      List( [ 1 .. n ], j -> mors[j][ 1 + x[1] ][ 1 + x[2] ] ) );
-            
+            focus := List( [ 1 .. l ], c ->
+                           Filtered( [ 1 .. s[c] ], i ->
+                                     ForAll( [ 1 .. n - 1 ], j ->
+                                             coarse_maps[j][c][i] = coarse_maps[j + 1][c][i] and
+                                             fine_maps[j][c][i] = fine_maps[j + 1][c][i] ) ) );
+
+            focus_length := List( [ 1 .. l ], c ->
+                                  Length( focus[c] ) );
+
+            equalizers_C := List( [ 1 .. l ], c ->
+                                  List( [ 1 .. focus_length[c] ], i ->
+                                        SafePosition( objectsC,
+                                                      Equalizer( C, objectsC[c], List( [ 1 .. n ], j -> mors[j][c][focus[c][i]] ) ) ) ) );
             ##
-            eq := BigInt( Length( flat_pos_eq ) );
-            
-            eq_index_in_C := List( [ 1 .. eq ], i ->
-                                   Position( objectsC,
-                                           Equalizer( C,
-                                                   objectsC[ 1 + flat_pos_eq[i][1] ],
-                                                   lists_of_parallel_morphisms_in_C[i] ) ) );
-            
-            sort_index_eq := List( [ 1 .. l ], c -> Positions( eq_index_in_C, c ) );
-            
-            return ObjectConstructor( UCm, Pair( eq, List( sort_index_eq, pos -> BigInt( Length( pos ) ) ) ) );
+
+            flat_equalizer_C := Concatenation( Concatenation( equalizers_C ) );
+
+            return ObjectConstructor( UCm, Pair( Length( flat_equalizer_C ), List( [ 1 .. l ], d -> Length( Positions( flat_equalizer_C, d ) ) ) ) );
             
         end );
         
@@ -741,10 +734,10 @@ InstallMethod( FiniteStrictCoproductCompletionOfObjectFiniteCategory,
         
         AddEmbeddingOfEqualizer( UCm,
           function( UCm, common_source, list_of_parallel_morphisms )
-            local C, objectsC, l, n, s, data, coarse_maps, fine_maps, mors, pos_eq, flat_pos_eq_coarse, flat_pos_eq_fine, eq,
-                  lists_of_parallel_morphisms_in_C, eq_index_in_C, sort_index_eq,
-                  Eq, equalizer, emb_coarse_maps, emb_fine_maps, emb_mors;
-            
+            local C, objectsC, l, n, s, data, coarse_maps, fine_maps, mors, focus, focus_length, equalizers_C,
+                  filtered_mul_C, mul_equalizer_UCm, equalizer_UCm, offset, emb_coarse_maps, emb_fine_maps,
+                  lists_of_parallel_morphisms_in_C, emb_mors;
+
             C := UnderlyingCategory( UCm );
             
             objectsC := SetOfObjectsOfCategory( C );
@@ -755,54 +748,71 @@ InstallMethod( FiniteStrictCoproductCompletionOfObjectFiniteCategory,
             
             s := PairOfIntAndList(common_source)[2];
             
-            data := List( list_of_parallel_morphisms, TripleOfLists );
+            data := List( list_of_parallel_morphisms, mor -> TripleOfLists( mor ) );
             
             coarse_maps := List( data, datum -> datum[1] );
-
             fine_maps := List( data, datum -> datum[2] );
-
             mors := List( data, datum -> datum[3] );
             
-            pos_eq := List( [ 1 .. l ], c ->
-                            Filtered( [ 0 .. s[c] - 1 ], i ->
-                                    ForAll( [ 1 .. n - 1 ], j ->
-                                            coarse_maps[j][c][ i + 1 ] = coarse_maps[j + 1][c][ i + 1 ] and
-                                            fine_maps[j][c][ i + 1 ] = fine_maps[j + 1][c][ i + 1 ] ) ) );
-            
-            flat_pos_eq_coarse := Concatenation( List( [ 1 .. l ], c ->
-                                         ListWithIdenticalEntries( Length( pos_eq[c] ), -1 + BigInt(c) ) ) );
-            
-            flat_pos_eq_fine := Concatenation( pos_eq );
-            
-            eq := Length( flat_pos_eq_coarse );
-            
-            lists_of_parallel_morphisms_in_C := List( [ 1 .. eq ] , i ->
-                                                      List( [ 1 .. n ], j ->
-                                                            mors[j][ 1 + flat_pos_eq_coarse[i] ][ 1 + flat_pos_eq_fine[i] ] ) );
-            eq_index_in_C := List( [ 1 .. eq ], i ->
-                                   Position( objectsC,
-                                           Equalizer( C,
-                                                   objectsC[ 1 + flat_pos_eq_coarse[i] ],
-                                                   lists_of_parallel_morphisms_in_C[i] ) ) );
-            
-            sort_index_eq := List( [ 1 .. l ], c -> Positions( eq_index_in_C, c ) );
-            
-            Eq := List( sort_index_eq, u -> BigInt( Length( u ) ) );
-            
-            equalizer := ObjectConstructor( UCm, Pair( BigInt( eq ), Eq ) );
-            
-            emb_coarse_maps := List( [ 1 .. l ], c -> flat_pos_eq_coarse{sort_index_eq[c]} );
-            
-            emb_fine_maps := List( [ 1 .. l ], c -> flat_pos_eq_fine{sort_index_eq[c]} );
+            focus := List( [ 1 .. l ], c ->
+                           Filtered( [ 1 .. s[c] ], i ->
+                                     ForAll( [ 1 .. n - 1 ], j ->
+                                             coarse_maps[j][c][i] = coarse_maps[j + 1][c][i] and
+                                             fine_maps[j][c][i] = fine_maps[j + 1][c][i] ) ) );
+
+            focus_length := List( [ 1 .. l ], c ->
+                                  Length( focus[c] ) );
+
+            equalizers_C := List( [ 1 .. l ], c ->
+                                  List( [ 1 .. focus_length[c] ], i ->
+                                        SafePosition( objectsC,
+                                                      Equalizer( C, objectsC[c], List( [ 1 .. n ], j -> mors[j][c][focus[c][i]] ) ) ) ) );
+
+            ##
+
+            filtered_mul_C := List( [ 1 .. l ], d ->
+                                      List( [ 1 .. l ], c ->
+                                            Length( Positions( equalizers_C[c], d ) ) ) );
+
+            mul_equalizer_UCm := List( [ 1 .. l ], d ->
+                                       Sum( filtered_mul_C[d] ) );
+
+            equalizer_UCm := ObjectConstructor( UCm, Pair( BigInt( Sum( mul_equalizer_UCm ) ), mul_equalizer_UCm ) );
+
+            ##
+
+            offset := List( [ 1 .. l ], c ->
+                            List( [ 1 .. focus_length[c] ], i ->
+                                  Sum( filtered_mul_C[ equalizers_C[c][i] ]{[ 1 .. l - 1 ]} ) +
+                                  Length( Positions( equalizers_C[c]{[ 1 .. i ]}, equalizers_C[c][i] ) ) ) );
+
+            ##
+
+            emb_coarse_maps := List( [ 1 .. l ], c ->
+                                     List( [ 1 .. mul_equalizer_UCm[c] ], i ->
+                                           -1 + SafePosition( [ 1 .. l ], d ->
+                                                              ForAny( [ 1 .. focus_length[d] ], j ->
+                                                                      equalizers_C[d][j] = c and offset[d][j] = i ) ) ) );
+
+            emb_fine_maps := List( [ 1 .. l ], c ->
+                                   List( [ 1 .. mul_equalizer_UCm[c] ], i ->
+                                         -1 + SafePosition( [ 1 .. focus_length[ 1 + emb_coarse_maps[c][i]] ], j ->
+                                                            offset[ 1 + emb_coarse_maps[c][i] ][j] = i ) ) );
+
+ 
+            lists_of_parallel_morphisms_in_C := List( [ 1 .. l ], c ->
+                                                      List( [ 1 .. mul_equalizer_UCm[c] ], i ->
+                                                            List( [ 1 .. n ], j ->
+                                                                  mors[j][ 1 + emb_coarse_maps[c][i] ][ 1 + emb_fine_maps[c][i] ] ) ) );
 
             emb_mors := List( [ 1 .. l ], c ->
-                              List( [ 1 .. Eq[c] ], i ->
+                              List( [ 1 .. mul_equalizer_UCm[c] ], i ->
                                     EmbeddingOfEqualizerWithGivenEqualizer( C,
-                                            objectsC[ 1 + flat_pos_eq_coarse[ sort_index_eq[c][i] ] ],
-                                            lists_of_parallel_morphisms_in_C[ sort_index_eq[c][i] ],
+                                            objectsC[ 1 + emb_coarse_maps[c][i] ],
+                                            lists_of_parallel_morphisms_in_C[c][i],
                                             objectsC[c] ) ) );
             
-            return MorphismConstructor( UCm, equalizer, Triple( emb_coarse_maps, emb_fine_maps, emb_mors ), common_source );
+            return MorphismConstructor( UCm, equalizer_UCm, Triple( emb_coarse_maps, emb_fine_maps, emb_mors ), common_source );
             
         end );
         
@@ -812,9 +822,10 @@ InstallMethod( FiniteStrictCoproductCompletionOfObjectFiniteCategory,
         
         AddUniversalMorphismIntoEqualizer( UCm,
           function( UCm, common_source, list_of_parallel_morphisms, test_object, test_morphism )
-            local C, objectsC, l, n, s, data, coarse_maps, fine_maps, mors, pos_eq, flat_pos_eq, lists_of_parallel_morphisms_in_C,
-                  eq, eq_index_in_C, sort_index_eq, equalizer, offset, test_data, test_coarse_maps, test_fine_maps, test_mors,
-                  t, pos_test_maps, univ_coarse_maps, univ_fine_maps, univ_mors;
+            local C, objectsC, l, n, s, data, coarse_maps, fine_maps, mors, focus, focus_length, equalizers_C,
+                  filtered_mul_C, mul_equalizer_UCm, equalizer_UCm, offset, test_data, test_coarse_maps,
+                  test_fine_maps, test_mors, mul_t, univ_coarse_maps, univ_fine_maps,
+                  lists_of_parallel_morphisms_in_C, univ_mors;
             
             C := UnderlyingCategory( UCm );
             
@@ -826,69 +837,79 @@ InstallMethod( FiniteStrictCoproductCompletionOfObjectFiniteCategory,
             
             s := PairOfIntAndList(common_source)[2];
             
-            data := List( list_of_parallel_morphisms, TripleOfLists );
+            data := List( list_of_parallel_morphisms, mor -> TripleOfLists( mor ) );
             
             coarse_maps := List( data, datum -> datum[1] );
-
             fine_maps := List( data, datum -> datum[2] );
-            
             mors := List( data, datum -> datum[3] );
             
-            pos_eq := List( [ 1 .. l ], c ->
-                            Filtered( [ 0 .. s[c] - 1 ], i ->
-                                    ForAll( [ 1 .. n - 1 ], j ->
-                                            coarse_maps[j][c][ i + 1 ] = coarse_maps[j + 1][c][ i + 1 ] and
-                                            fine_maps[j][c][ i + 1 ] = fine_maps[j + 1][c][ i + 1 ] ) ) );
-            
-            flat_pos_eq := Concatenation( List( [ 1 .. l ], c -> List( pos_eq[c], i -> [ -1 + c , i ] ) ) );
-            
-            lists_of_parallel_morphisms_in_C := List( flat_pos_eq , x ->
-                                                      List( [ 1 .. n ], j -> mors[j][ 1 + x[1] ][ 1 + x[2] ] ) );
-            
-            eq := Length( flat_pos_eq );
-            
-            eq_index_in_C := List( [ 1 .. eq ], i ->
-                                   Position( objectsC,
-                                           Equalizer( C,
-                                                   objectsC[ 1 + flat_pos_eq[i][1] ],
-                                                   lists_of_parallel_morphisms_in_C[i] ) ) );
-            
-            sort_index_eq := List( [ 1 .. l ], c -> Positions( eq_index_in_C, c ) );
-            
-            equalizer := ObjectConstructor( UCm, Pair( BigInt( eq ), List( sort_index_eq, l -> BigInt( Length(l) ) ) ) );
-            
-            offset := List( [ 1 .. eq ], i -> BigInt( Position( sort_index_eq[ eq_index_in_C[i] ] , i ) ) );
-            
-            ##offset := List( [ 1 .. teq ], i -> 1 + Length( Positions( eq_index_in_C{[ 1 .. i ]}, eq_index_in_C[i] ) ) );
+            focus := List( [ 1 .. l ], c ->
+                           Filtered( [ 1 .. s[c] ], i ->
+                                     ForAll( [ 1 .. n - 1 ], j ->
+                                             coarse_maps[j][c][i] = coarse_maps[j + 1][c][i] and
+                                             fine_maps[j][c][i] = fine_maps[j + 1][c][i] ) ) );
+
+            focus_length := List( [ 1 .. l ], c ->
+                                  Length( focus[c] ) );
+
+            equalizers_C := List( [ 1 .. l ], c ->
+                                  List( [ 1 .. focus_length[c] ], i ->
+                                        SafePosition( objectsC,
+                                                      Equalizer( C, objectsC[c], List( [ 1 .. n ], j -> mors[j][c][focus[c][i]] ) ) ) ) );
+ 
+            ##
+
+            filtered_mul_C := List( [ 1 .. l ], d ->
+                                      List( [ 1 .. l ], c ->
+                                            Length( Positions( equalizers_C[c], d ) ) ) );
+
+            mul_equalizer_UCm := List( [ 1 .. l ], d ->
+                                       Sum( filtered_mul_C[d] ) );
+
+            equalizer_UCm := ObjectConstructor( UCm, Pair( BigInt( Sum( mul_equalizer_UCm ) ), mul_equalizer_UCm ) );
+
+            ##
+
+            offset := List( [ 1 .. l ], c ->
+                            List( [ 1 .. focus_length[c] ], i ->
+                                  Sum( filtered_mul_C[ equalizers_C[c][i] ]{[ 1 .. l - 1 ]} ) +
+                                  Length( Positions( equalizers_C[c]{[ 1 .. i ]}, equalizers_C[c][i] ) ) ) );
+
+            ##
             
             test_data := TripleOfLists( test_morphism );
             
             test_coarse_maps := test_data[1];
             
             test_fine_maps := test_data[2];
-
+            
             test_mors := test_data[3];
-            
-            t := PairOfIntAndList( test_object )[2];
-            
-            pos_test_maps := List( [ 1 .. l ], c ->
-                                   List( [ 1 .. t[c] ], i ->
-                                         Position( flat_pos_eq, [ test_coarse_maps[c][i], test_fine_maps[c][i] ] ) ) );
-            
-            univ_coarse_maps := List( [ 1 .. l ], c -> List( eq_index_in_C{pos_test_maps[c]}, e -> -1 + BigInt( e ) ) );
-            
-            univ_fine_maps := List( [ 1 .. l ], c -> List( offset{pos_test_maps[c]}, e -> -1 + BigInt( e ) ) );
-            
+
+            mul_t := PairOfIntAndList( test_object )[2];
+
+            univ_coarse_maps := List( [ 1 .. l ], c ->
+                                      List( [ 1 .. mul_t[c] ], i ->
+                                            -1 + equalizers_C[ test_coarse_maps[c][i] ][ test_fine_maps[c][i] ] ) );
+
+            univ_fine_maps := List( [ 1 .. l ], c ->
+                                      List( [ 1 .. mul_t[c] ], i ->
+                                            -1 + offset[ test_coarse_maps[c][i] ][ test_fine_maps[c][i] ] ) );
+
+            lists_of_parallel_morphisms_in_C := List( [ 1 .. l ], c ->
+                                                      List( [ 1 .. mul_t[c] ], i ->
+                                                            List( [ 1 .. n ], j ->
+                                                                  mors[j][ 1 + test_coarse_maps[c][i] ][ 1 + test_fine_maps[c][i] ] ) ) );
+
             univ_mors := List( [ 1 .. l ], c ->
-                               List( [ 1 .. t[c] ], i ->
+                               List( [ 1 .. mul_t[c] ], i ->
                                      UniversalMorphismIntoEqualizerWithGivenEqualizer( C,
-                                             objectsC[ 1 + flat_pos_eq[ pos_test_maps[c][i] ][1] ],
-                                             lists_of_parallel_morphisms_in_C[ pos_test_maps[c][i] ],
+                                             objectsC[ 1 + test_coarse_maps[c][i] ],
+                                             lists_of_parallel_morphisms_in_C[c][i],
                                              objectsC[c],
                                              test_mors[c][i],
-                                             objectsC[ eq_index_in_C[ pos_test_maps[c][i] ] ] ) ) );
+                                             objectsC[equalizers_C[ 1 + test_coarse_maps[c][i] ][ 1 + test_fine_maps[c][i] ]] ) ) );
             
-            return MorphismConstructor( UCm, test_object, Triple( univ_coarse_maps, univ_fine_maps, univ_mors ), equalizer );
+            return MorphismConstructor( UCm, test_object, Triple( univ_coarse_maps, univ_fine_maps, univ_mors ), equalizer_UCm );
             
         end );
         
